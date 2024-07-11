@@ -1,0 +1,59 @@
+// Following file contains a simple example of a template file that will be used to
+// generate the test files for the file.
+// Here are no conflicts resolved, when some tests/imports are already present in the file.
+// The file will have the same name as the file that is being tested, but with the suffix "_test.go".
+
+package {{ .PackageName }}
+
+import (
+    {{ range .Imports }}
+    "{{ . }}"
+    {{- end }}
+)
+
+{{ range .Functions }}
+func Test_{{ .Name }}(t *testing.T) {
+    {{ if .Args }}
+    type args struct {
+        {{ range .Args }}{{ .Name }} {{ .Type }}
+        {{ end }}
+    }
+    {{- end }}
+
+    {{ if .Results }}
+    type want struct {
+        {{ range .Results }}{{ .Name }} {{ .Type }}
+        {{ end }}
+    }
+    {{- end }}
+
+    testcases := []struct {
+        name string
+        {{ if .Args }}args args{{ end }}
+        {{ if .Results }}want want{{ end }}
+    }{
+        // todo: testcases will be automatically generated here
+        {},
+    }
+
+    for _, tt := range testcases {
+        t.Run(tt.name, func(t *testing.T) {
+            {{- $got_results := .Results | collect "Name" | to_got }}
+            {{- $want_args := .Args | collect "Name" | prefix "tt.args." | join ", " }}
+
+            {{ if .Results }}{{ $got_results | join ", " }} := {{ .Name }}({{ $want_args }})
+            {{ else }}{{ .Name }}({{ $want_args }}){{ end }}
+
+            {{ if .Results }}
+            {{ $want_results := .Results | collect "Name" | prefix "tt.want." }}
+
+            {{ range $index, $result := $got_results }}
+            if !reflect.DeepEqual({{ $result }}, {{ index $want_results $index }}) {
+                t.Errorf("{{ $result }} = %v, want %v", {{ $result }}, {{ index $want_results $index }})
+            }
+            {{ end }}
+            {{ end }}
+        })
+    }
+}
+{{ end }}
