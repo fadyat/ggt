@@ -1,0 +1,16 @@
+linters:
+  disable-all: true
+  enable:
+    - gci
+    - goconst
+
+
+linters-settings:
+  gci:
+    custom-order: true
+    sections:
+      - standard
+      - blank
+      - default
+      - blank
+      - localmodule
