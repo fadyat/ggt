@@ -10,32 +10,36 @@ import (
     {{ . }}
     {{- end }}
 )
+{{ else }}
+import (
+    "testing"
+    "github.com/stretchr/testify/require"
+)
 {{- end }}
 
 {{ range .Functions }}
-func Test_{{ .Name }}(t *testing.T) {
+func {{ test_name . }}(t *testing.T) {
+
     {{- if .Args }}
     type args {{ generics .Generics }} struct {
         {{- range .Args }}
-        {{ .Name }} {{ .Type }}
+        {{ .Name }} {{ arg_define .Type }}
         {{- end }}
     }
-    {{ end }}
+    {{- end }}
+
     {{- if .Results }}
     type want {{ generics .Generics }} struct {
         {{- range .Results }}
-        {{ .Name }} {{ .Type }}
+        {{ .Name }} {{ arg_define .Type }}
         {{- end }}
     }
-    {{ end }}
+    {{- end }}
+
     testcases := []struct {
         name string
-        {{- if .Args }}
-        args args {{ generics_args .Generics }}
-        {{- end }}
-        {{- if .Results }}
-        want want {{ generics_args .Generics }}
-        {{- end }}
+        {{ if .Args }} args args {{ generics_args .Generics }} {{ end }}
+        {{ if .Results }} want want {{ generics_args .Generics }} {{ end }}
     }{
         {},
     }
@@ -43,17 +47,19 @@ func Test_{{ .Name }}(t *testing.T) {
     for _, tt := range testcases {
         t.Run(tt.name, func(t *testing.T) {
             {{- $got_results := .Results | collect "Name" | to_got }}
-            {{- $want_args := .Args | collect "Name" | prefix "tt.args." | join ", " }}
+            {{- $call_args := call_args .Args }}
+
             {{- if .Results }}
-            {{ $got_results | join ", " }} := {{ .Name }}({{ $want_args }})
+                {{ $got_results | join ", " }} := {{ .Name }}({{ $call_args }})
             {{- else }}
-            {{ .Name }}({{ $want_args }})
+                {{ test_call . }}({{ $call_args }})
             {{- end }}
+
             {{- if .Results }}
-            {{- $want_results := .Results | collect "Name" | prefix "tt.want." }}
-            {{ range $index, $result := $got_results }}
-            require.Equal(t, {{ index $want_results $index }}, {{ $result }})
-            {{- end }}
+                {{- $want_results := .Results | collect "Name" | prefix "tt.want." }}
+                {{ range $index, $result := $got_results }}
+                    require.Equal(t, {{ index $want_results $index }}, {{ $result }})
+                {{- end }}
             {{- end }}
         })
     }

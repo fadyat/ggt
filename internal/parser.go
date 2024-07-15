@@ -44,7 +44,8 @@ func (p *Parser) GenerateMissingTests() (f *File, err error) {
 
 	inputFuncs := getFuncs(p.inputFileSet, p.inputAst, func(fs *token.FileSet, decl *ast.FuncDecl) *Fn {
 		ff := parseFn(fs, decl)
-		ff.generateFriendlyResultNames()
+		ff.generateFriendlyNames(ff.Args)
+		ff.generateFriendlyNames(ff.Results)
 		return ff
 	})
 
@@ -83,7 +84,7 @@ func getFuncs(fs *token.FileSet, f *ast.File, parser func(*token.FileSet, *ast.F
 		return nil
 	}
 
-	return lo.FilterMap(f.Decls, func(item ast.Decl, index int) (*Fn, bool) {
+	return lo.FilterMap(f.Decls, func(item ast.Decl, _ int) (*Fn, bool) {
 		fn, ok := item.(*ast.FuncDecl)
 		if !ok {
 			return nil, false
@@ -96,31 +97,48 @@ func getFuncs(fs *token.FileSet, f *ast.File, parser func(*token.FileSet, *ast.F
 func parseFn(fs *token.FileSet, f *ast.FuncDecl) *Fn {
 	var function = newFn(f.Name.Name)
 
+	if f.Recv != nil {
+		var (
+			receiverType = getTypeName(fs, f.Recv.List[0].Type)
+			receiverName = ""
+		)
+
+		if len(f.Recv.List[0].Names) > 0 {
+			receiverName = f.Recv.List[0].Names[0].Name
+		}
+
+		function.Receiver = newIdentifier(receiverName, receiverType)
+	}
+
 	if f.Type.TypeParams != nil {
-		function.Generics = lo.FlatMap(f.Type.TypeParams.List, func(typeParam *ast.Field, _ int) []*argument {
+		function.Generics = lo.FlatMap(f.Type.TypeParams.List, func(typeParam *ast.Field, _ int) []*identifier {
 			typeParamType := getTypeName(fs, typeParam.Type)
-			return lo.Map(typeParam.Names, func(name *ast.Ident, _ int) *argument {
-				return newArgument(name.Name, typeParamType)
+			return lo.Map(typeParam.Names, func(name *ast.Ident, _ int) *identifier {
+				return newIdentifier(name.Name, typeParamType)
 			})
 		})
 	}
 
-	function.Args = lo.FlatMap(f.Type.Params.List, func(arg *ast.Field, _ int) []*argument {
+	function.Args = lo.FlatMap(f.Type.Params.List, func(arg *ast.Field, _ int) []*identifier {
 		argType := getTypeName(fs, arg.Type)
-		return lo.Map(arg.Names, func(name *ast.Ident, _ int) *argument {
-			return newArgument(name.Name, argType)
+		if len(arg.Names) == 0 {
+			return []*identifier{newIdentifier("", argType)}
+		}
+
+		return lo.Map(arg.Names, func(name *ast.Ident, _ int) *identifier {
+			return newIdentifier(name.Name, argType)
 		})
 	})
 
 	if f.Type.Results != nil {
-		function.Results = lo.FlatMap(f.Type.Results.List, func(res *ast.Field, _ int) []*result {
+		function.Results = lo.FlatMap(f.Type.Results.List, func(res *ast.Field, _ int) []*identifier {
 			resType := getTypeName(fs, res.Type)
 			if len(res.Names) == 0 {
-				return []*result{newResult("", resType)}
+				return []*identifier{newIdentifier("", resType)}
 			}
 
-			return lo.Map(res.Names, func(name *ast.Ident, _ int) *result {
-				return newResult(name.Name, resType)
+			return lo.Map(res.Names, func(name *ast.Ident, _ int) *identifier {
+				return newIdentifier(name.Name, resType)
 			})
 		})
 	}

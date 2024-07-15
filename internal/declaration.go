@@ -14,9 +14,10 @@ type File struct {
 
 type Fn struct {
 	Name     string
-	Args     []*argument
-	Generics []*argument
-	Results  []*result
+	Receiver *identifier
+	Args     []*identifier
+	Generics []*identifier
+	Results  []*identifier
 }
 
 func newFn(name string) *Fn {
@@ -25,9 +26,9 @@ func newFn(name string) *Fn {
 	}
 }
 
-func (f *Fn) generateFriendlyResultNames() {
+func (f *Fn) generateFriendlyNames(iterable []*identifier) {
 	var (
-		countTypes = lo.CountValuesBy(f.Results, func(res *result) string {
+		countTypes = lo.CountValuesBy(iterable, func(res *identifier) string {
 			if res.Type == "error" {
 				return res.Type
 			}
@@ -50,12 +51,10 @@ func (f *Fn) generateFriendlyResultNames() {
 		currentErrorCount, currentNotErrorCount = initialErrorCount, initialNotErrorCount
 	)
 
-	for _, res := range f.Results {
-
-		// if any of the results already has a name, it means,
-		// that the names are named by the user, we should not change them
-		if res.Name != "" {
-			return
+	for _, res := range iterable {
+		// setting names only for none user-defined names or empty names
+		if res.Name != "" && res.Name != "_" {
+			continue
 		}
 
 		var name string
@@ -69,25 +68,13 @@ func (f *Fn) generateFriendlyResultNames() {
 	}
 }
 
-type argument struct {
+type identifier struct {
 	Name string
 	Type string
 }
 
-func newArgument(name, typ string) *argument {
-	return &argument{
-		Name: name,
-		Type: typ,
-	}
-}
-
-type result struct {
-	Name string
-	Type string
-}
-
-func newResult(name, typ string) *result {
-	return &result{
+func newIdentifier(name, typ string) *identifier {
+	return &identifier{
 		Name: name,
 		Type: typ,
 	}

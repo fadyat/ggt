@@ -3,7 +3,28 @@ linters:
   enable:
     - gci
     - goconst
-
+    - errcheck
+    - gosimple
+    - govet
+    - copyloopvar
+    - cyclop
+    - ineffassign
+    - staticcheck
+    - unused
+    - gocritic
+    - ireturn
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - stylecheck
+    - testifylint
+    - tparallel
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - wastedassign
+    - whitespace
 
 linters-settings:
   gci:
