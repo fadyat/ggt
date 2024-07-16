@@ -74,6 +74,10 @@ func (p *Parser) GenerateMissingTests() (f *File, err error) {
 		file.Imports = lo.Map(p.inputAst.Imports, func(imp *ast.ImportSpec, _ int) string {
 			return imp.Path.Value
 		})
+
+		// appending empty string in cases when no imports exist, but
+		// need to generate imports from the template
+		file.Imports = append(file.Imports, "")
 	}
 
 	return file, nil
