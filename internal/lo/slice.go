@@ -61,3 +61,16 @@ func ContainsBy[T any](collection []T, predicate func(item T) bool) bool {
 
 	return false
 }
+
+// todo: comments for code
+
+func SliceToMap[T any, K comparable, V any](collection []T, transform func(item T) (K, V)) map[K]V {
+	out := make(map[K]V)
+
+	for i := range collection {
+		k, v := transform(collection[i])
+		out[k] = v
+	}
+
+	return out
+}

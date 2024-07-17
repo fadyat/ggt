@@ -31,6 +31,26 @@ func main() {
 		exit(err, "generate tests")
 	}
 
+	for _, fn := range file.Functions {
+		fmt.Println(fn.Name)
+		for _, arg := range fn.Args {
+			fmt.Println("  arg:", arg.Name, arg.Type)
+		}
+
+		for _, res := range fn.Results {
+			fmt.Println("  res:", res.Name, res.Type)
+		}
+
+		if fn.Receiver != nil {
+			fmt.Println("  receiver:", fn.Receiver.Name, fn.Receiver.Type)
+			for _, field := range fn.Struct.Fields {
+				fmt.Println("    field:", field.Name, field.Type)
+			}
+		}
+
+		fmt.Println()
+	}
+
 	renderer := internal.NewRenderer(f)
 	err = renderer.Render(file)
 	exit(err, "render tests")

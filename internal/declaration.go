@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/fadyat/gutify/internal/lo"
 )
@@ -12,12 +13,28 @@ type File struct {
 	Functions   []*Fn
 }
 
+type Struct struct {
+	Name     string
+	Generics []*identifier
+	Fields   []*identifier
+}
+
+func newStruct(name string) *Struct {
+	return &Struct{
+		Name: name,
+	}
+}
+
 type Fn struct {
 	Name     string
 	Receiver *identifier
 	Args     []*identifier
 	Generics []*identifier
 	Results  []*identifier
+
+	// Struct is the type definition of the receiver with fields
+	// required for correct method generation.
+	Struct *Struct
 }
 
 func newFn(name string) *Fn {
@@ -66,6 +83,15 @@ func (f *Fn) generateFriendlyNames(iterable []*identifier) {
 
 		res.Name = name
 	}
+}
+
+func (f *Fn) structTypeBasedOnReceiver() string {
+	if f.Receiver == nil {
+		return ""
+	}
+
+	// removing the pointer from the receiver type
+	return strings.TrimPrefix(f.Receiver.Type, "*")
 }
 
 type identifier struct {

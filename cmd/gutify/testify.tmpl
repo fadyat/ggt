@@ -14,6 +14,13 @@ import (
 
 {{ range .Functions }}
 func {{ test_name . }}(t *testing.T) {
+    {{- if .Struct }}
+    type fields {{ generics .Generics }} struct {
+        {{- range .Struct.Fields }}
+        {{ .Name }} {{ arg_define .Type }}
+        {{- end }}
+    }
+    {{- end }}
 
     {{- if .Args }}
     type args {{ generics .Generics }} struct {
@@ -35,6 +42,7 @@ func {{ test_name . }}(t *testing.T) {
         name string
         {{ if .Args }} args args {{ generics_args .Generics }} {{ end }}
         {{ if .Results }} want want {{ generics_args .Generics }} {{ end }}
+        {{ if .Struct }} fields fields {{ generics_args .Generics }} {{ end }}
     }{
         {},
     }
@@ -44,8 +52,16 @@ func {{ test_name . }}(t *testing.T) {
             {{- $got_results := .Results | collect "Name" | to_got }}
             {{- $call_args := call_args .Args }}
 
+            {{- if .Struct }}
+            {{ .Receiver.Name }} := {{ .Struct.Name }}{
+                {{- range .Struct.Fields }}
+                {{ .Name }}: tt.fields.{{ .Name }},
+                {{- end }}
+            }
+            {{ end }}
+
             {{- if .Results }}
-                {{ $got_results | join ", " }} := {{ .Name }}({{ $call_args }})
+                {{ $got_results | join ", " }} := {{ test_call . }}({{ $call_args }})
             {{- else }}
                 {{ test_call . }}({{ $call_args }})
             {{- end }}
