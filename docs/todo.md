@@ -11,3 +11,6 @@
 
 - mocks support, generate automatic prepare function + expectations, independent of the test framework
 - error assertion `wantErr assert.ErrorFunc / require.ErrorFunc`
+- generate want inside the testcase struct, not in want struct
+- default context.TODO() for all contexts??
+- brew?

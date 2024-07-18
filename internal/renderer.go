@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
@@ -35,16 +36,17 @@ func (r *Renderer) Render(file *File) error {
 }
 
 func renderTemplate(out io.Writer, templatePath string, data any) error {
+	templateName := filepath.Base(templatePath)
 	tmpl, err := template.
-		New(templatePath).
+		New(templateName).
 		Funcs(funcMap()).
-		ParseFiles(templatePath)
+		ParseFiles(filepath.Clean(templatePath))
 
 	if err != nil {
 		return fmt.Errorf("parse template: %w", err)
 	}
 
-	if err = tmpl.ExecuteTemplate(out, templatePath, data); err != nil {
+	if err = tmpl.ExecuteTemplate(out, templateName, data); err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
 
@@ -145,8 +147,8 @@ func genericsArgs(value []*identifier) string {
 func testName(fn *Fn) string {
 	var sb strings.Builder
 	sb.WriteString("Test_")
-	if fn.Receiver != nil {
-		sb.WriteString(fmt.Sprintf("%s_", fn.Receiver.Name))
+	if fn.Struct != nil {
+		sb.WriteString(fmt.Sprintf("%s_", fn.Struct.Name))
 	}
 
 	sb.WriteString(fn.Name)

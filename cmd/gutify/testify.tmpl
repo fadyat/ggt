@@ -40,9 +40,9 @@ func {{ test_name . }}(t *testing.T) {
 
     testcases := []struct {
         name string
+        {{ if .Struct }} fields fields {{ generics_args .Generics }} {{ end }}
         {{ if .Args }} args args {{ generics_args .Generics }} {{ end }}
         {{ if .Results }} want want {{ generics_args .Generics }} {{ end }}
-        {{ if .Struct }} fields fields {{ generics_args .Generics }} {{ end }}
     }{
         {},
     }
