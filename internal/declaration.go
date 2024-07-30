@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fadyat/gutify/internal/lo"
+	"github.com/fadyat/ggt/internal/lo"
 )
 
 type File struct {

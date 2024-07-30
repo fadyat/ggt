@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fadyat/gutify/internal/lo"
+	"github.com/fadyat/ggt/internal/lo"
 )
 
 // PackageParser is required in cases, when we need to generate the
@@ -152,7 +152,7 @@ func (p *PackageParser) getStructsForMethods(methods []*Fn) error {
 		return nil
 	}
 
-	// todo: simplify
+	// todo: simplify, can reuse logic from above block
 
 	// doing the same logic, but for the rest of the files in the package
 	for _, file := range packageFiles {

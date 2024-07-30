@@ -1,4 +1,4 @@
-module github.com/fadyat/gutify
+module github.com/fadyat/ggt
 
 go 1.22
 
