@@ -1,11 +1,12 @@
-### MAJOR: generate want inside the testcase struct, not in want struct
-
 ### MAJOR: error assertion `wantErr assert.ErrorFunc / require.ErrorFunc`
 
 > - via flags?
 > - how to make it more flexible? like plugging for custom logics
+> - need to be in args, called in the test function after the function call (how to plug it in the test function?)
 
-### MAJOR: mocks support, generate automatic prepare function + expectations, independent of the test framework
+### MAJOR: mocks support, generate automatic prepare function + expectations
+
+> - independent of the test framework
 
 ### MAJOR: user documentation
 
@@ -17,6 +18,45 @@
 > - append new tests
 
 ### MAJOR: installation guidelines, brew, go install, from binaries, etc.
+
+### MAJOR: generate tests only for specified functions (regex, name, etc.)
+
+### MAJOR: can generate only input generics for input arguments, output generics for output arguments
+
+### MAJOR: tests generation verification framework
+
+> - verify that generated tests are correct
+> - using the special test cases, which have defined input and output
+
+```go
+//	func Test_letsReturnError(t *testing.T) {
+//		type args struct {
+//			msg string
+//		}
+//		type want struct {
+//			wantErr require.ErrorAssertionFunc
+//		}
+//
+//		testcases := []struct {
+//			name string
+//			args args
+//			want want
+//		}{
+//			{},
+//		}
+//
+//		for _, tt := range testcases {
+//			t.Run(tt.name, func(t *testing.T) {
+//				gotErr := letsReturnError(tt.args.msg)
+//
+//				tt.want.wantErr(t, gotErr)
+//			})
+//		}
+//	}
+func letsReturnError(msg string) error {
+	return errors.New(msg)
+}
+```
 
 ### MINOR: header in the generated file, that it's generated using the tool
 
@@ -36,8 +76,8 @@
 
 ### MINOR: if it is not a struct, need to make it as an argument
 
-    ```text
-    type b string
-    
-    func (b) String() {}
-    ```
+```golang
+type b string
+
+func (b) String() {}
+```
