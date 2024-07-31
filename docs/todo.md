@@ -58,6 +58,8 @@ func letsReturnError(msg string) error {
 }
 ```
 
+### MAJOR: exported functions only
+
 ### MINOR: header in the generated file, that it's generated using the tool
 
 > - write some text, which tells that the file is generated using the tool

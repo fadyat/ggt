@@ -112,6 +112,21 @@ func (p *PackageParser) getMissingTests() []*Fn {
 	})
 }
 
+func (p *PackageParser) parseAndMatchStructs(missingStructsFn map[string]*Fn) {
+	fileStructs := lo.SliceToMap(
+		getStructs(p.currentPackageFileFileSet, p.currentPackageFileAst, parseStructs),
+		func(s *Struct) (string, *Struct) { return s.Name, s },
+	)
+
+	for _, method := range missingStructsFn {
+		structType := method.structTypeBasedOnReceiver()
+		if s, ok := fileStructs[structType]; ok {
+			method.Struct = s
+			delete(missingStructsFn, method.Name)
+		}
+	}
+}
+
 func (p *PackageParser) getStructsForMethods(methods []*Fn) error {
 	missingStructsFn := lo.SliceToMap(
 		lo.FilterMap(methods, func(method *Fn, _ int) (*Fn, bool) {
@@ -130,29 +145,12 @@ func (p *PackageParser) getStructsForMethods(methods []*Fn) error {
 		return fmt.Errorf("list package files: %w", err)
 	}
 
-	fmt.Println("packageFiles: ", packageFiles)
-
 	p.currentPackageFileFileSet, p.currentPackageFileAst = p.inputFileSet, p.inputAst
 
-	fileStructs := lo.SliceToMap(
-		getStructs(p.currentPackageFileFileSet, p.currentPackageFileAst, parseStructs),
-		func(s *Struct) (string, *Struct) { return s.Name, s },
-	)
-
-	for _, method := range missingStructsFn {
-		structType := method.structTypeBasedOnReceiver()
-		if s, ok := fileStructs[structType]; ok {
-			method.Struct = s
-			delete(missingStructsFn, method.Name)
-			continue
-		}
-	}
-
+	p.parseAndMatchStructs(missingStructsFn)
 	if len(missingStructsFn) == 0 {
 		return nil
 	}
-
-	// todo: simplify, can reuse logic from above block
 
 	// doing the same logic, but for the rest of the files in the package
 	for _, file := range packageFiles {
@@ -161,20 +159,7 @@ func (p *PackageParser) getStructsForMethods(methods []*Fn) error {
 			return fmt.Errorf("parse file: %w", err)
 		}
 
-		fileStructs = lo.SliceToMap(
-			getStructs(p.currentPackageFileFileSet, p.currentPackageFileAst, parseStructs),
-			func(s *Struct) (string, *Struct) { return s.Name, s },
-		)
-
-		for _, method := range missingStructsFn {
-			structType := method.structTypeBasedOnReceiver()
-			if s, ok := fileStructs[structType]; ok {
-				method.Struct = s
-				delete(missingStructsFn, method.Name)
-				continue
-			}
-		}
-
+		p.parseAndMatchStructs(missingStructsFn)
 		if len(missingStructsFn) == 0 {
 			return nil
 		}
