@@ -42,29 +42,29 @@ import (
 //    }
 // }
 
-// ResultsPlugin is a subset of plugins responsible for modifying function return values
+// ResultPlugin is a subset of plugins responsible for modifying function return values
 // and checking subsequent results.
-type ResultsPlugin interface {
+type ResultPlugin interface {
 
-	// PatchResults changes the format of result values
+	// Patch changes the format of result values
 	// for further custom validation logic.
-	PatchResults([]*internal.Identifier) []*internal.Identifier
+	Patch([]*internal.Identifier) []*internal.Identifier
 
-	// VerifyResults changes the validation logic for the results.
+	// Verify changes the validation logic for the results.
 	// Map will contain the list of templates, which can be used for particular
 	// result validation.
-	VerifyResults([]*internal.Identifier, map[string][]string)
+	Verify([]*internal.Identifier, map[string][]string)
 }
 
-func WithResultsPlugins(fn *internal.Fn, plugins []ResultsPlugin) string {
+func WithResultPlugins(fn *internal.Fn, plugins []ResultPlugin) string {
 	var (
 		results       = fn.Results
 		verifications = make(map[string][]string)
 	)
 
 	for _, plugin := range plugins {
-		plugin.VerifyResults(results, verifications)
-		results = plugin.PatchResults(results)
+		plugin.Verify(results, verifications)
+		results = plugin.Patch(results)
 	}
 
 	fn.Results = results
@@ -76,12 +76,12 @@ func WithResultsPlugins(fn *internal.Fn, plugins []ResultsPlugin) string {
 	)
 }
 
-// coreDefaultResultsPlugin is a default implementation of the ResultsPlugin interface, which
+// coreResultPlugin is a default implementation of the ResultPlugin interface, which
 // will be used as a base for all other plugins.
 // It doesn't change the results and doesn't provide any additional verification logic.
-type coreDefaultResultsPlugin struct{}
+type coreResultPlugin struct{}
 
-func (c *coreDefaultResultsPlugin) PatchResults(identifiers []*internal.Identifier) []*internal.Identifier {
+func (c *coreResultPlugin) Patch(identifiers []*internal.Identifier) []*internal.Identifier {
 	return identifiers
 }
 
@@ -93,7 +93,7 @@ func toGotSingle(v string) string { // todo: remove me, merge with a renderer
 	return v
 }
 
-func (c *coreDefaultResultsPlugin) VerifyResults(identifiers []*internal.Identifier, m map[string][]string) {
+func (c *coreResultPlugin) Verify(identifiers []*internal.Identifier, m map[string][]string) {
 	for _, identifier := range identifiers {
 		m[identifier.Name] = []string{fmt.Sprintf(
 			"require.Equal(t, tt.want.%s, %s)",
@@ -107,7 +107,7 @@ func (c *coreDefaultResultsPlugin) VerifyResults(identifiers []*internal.Identif
 // special assertion function, which called after the function execution.
 type errorAssertionPlugin struct{}
 
-func (e *errorAssertionPlugin) PatchResults(identifiers []*internal.Identifier) []*internal.Identifier {
+func (e *errorAssertionPlugin) Patch(identifiers []*internal.Identifier) []*internal.Identifier {
 	for _, identifier := range identifiers {
 		if identifier.Type == "error" {
 			identifier.Type = "require.ErrorAssertionFunc"
@@ -117,7 +117,7 @@ func (e *errorAssertionPlugin) PatchResults(identifiers []*internal.Identifier) 
 	return identifiers
 }
 
-func (e *errorAssertionPlugin) VerifyResults(identifiers []*internal.Identifier, m map[string][]string) {
+func (e *errorAssertionPlugin) Verify(identifiers []*internal.Identifier, m map[string][]string) {
 	for _, identifier := range identifiers {
 		if identifier.Type == "error" {
 			m[identifier.Name] = []string{fmt.Sprintf(
@@ -129,9 +129,9 @@ func (e *errorAssertionPlugin) VerifyResults(identifiers []*internal.Identifier,
 	}
 }
 
-func newResultsPlugins() []ResultsPlugin {
-	return []ResultsPlugin{
-		&coreDefaultResultsPlugin{},
+func newResultPlugins() []ResultPlugin {
+	return []ResultPlugin{
+		&coreResultPlugin{},
 		&errorAssertionPlugin{},
 	}
 }

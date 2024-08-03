@@ -25,13 +25,13 @@ func NewPluggableFile(f *internal.File) *PluggableFile {
 func newPluggableFns(fns []*internal.Fn) []*PluggableFn {
 	var (
 		pluggableFns = make([]*PluggableFn, 0, len(fns))
-		rplugs       = newResultsPlugins()
+		rplugs       = newResultPlugins()
 	)
 
 	for _, fn := range fns {
 		pluggableFns = append(pluggableFns, &PluggableFn{
 			Fn:           fn,
-			Verification: WithResultsPlugins(fn, rplugs),
+			Verification: WithResultPlugins(fn, rplugs),
 		})
 	}
 
