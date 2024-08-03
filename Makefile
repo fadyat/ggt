@@ -11,3 +11,6 @@ fmt:
 
 lint:
 	@golangci-lint run -v ./...
+
+share: bin
+	@sudo cp .bin/$(APP_NAME) /usr/local/bin/$(APP_NAME)

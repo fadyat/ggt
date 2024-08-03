@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
@@ -12,6 +11,87 @@ import (
 	"github.com/fadyat/ggt/internal"
 	"github.com/fadyat/ggt/internal/plugins"
 )
+
+const tmpl = `
+{{- if .PackageName }}
+package {{ .PackageName }}
+{{- end }}
+
+{{- if .Imports }}
+import (
+    "testing"
+    "github.com/stretchr/testify/require"
+    {{- range .Imports }}
+    {{ . }}
+    {{- end }}
+)
+{{- end }}
+
+{{ range .Functions }}
+func {{ .TestName }}(t *testing.T) {
+    {{- if .Struct }}
+    type fields {{ generics .Generics }} struct {
+        {{- range .Struct.Fields }}
+        {{ .Name }} {{ arg_define .Type }}
+        {{- end }}
+    }
+    {{- end }}
+
+    {{- if .Args }}
+    type args {{ generics .Generics }} struct {
+        {{- range .Args }}
+        {{ .Name }} {{ arg_define .Type }}
+        {{- end }}
+    }
+    {{- end }}
+
+    {{- if .Results }}
+    type want {{ generics .Generics }} struct {
+        {{- range .Results }}
+        {{ .Name }} {{ arg_define .Type }}
+        {{- end }}
+    }
+    {{- end }}
+
+    testcases := []struct {
+        name string
+        {{- if .Struct }}
+    	fields fields {{ generics_args .Generics }}
+    	{{- end }}
+    	{{- if .Args }}
+    	args args {{ generics_args .Generics }}
+    	{{- end }}
+    	{{- if .Results }}
+    	want want {{ generics_args .Generics }}
+    	{{- end }}
+    }{
+        {},
+    }
+
+    for _, tt := range testcases {
+        t.Run(tt.name, func(t *testing.T) {
+            {{- $got_results := .Results | collect "Name" | to_got }}
+            {{- $call_args := call_args .Args }}
+
+            {{- if .Struct }}
+            {{ .Receiver.Name }} := {{ .Struct.Name }}{
+                {{- range .Struct.Fields }}
+                {{ .Name }}: tt.fields.{{ .Name }},
+                {{- end }}
+            }
+            {{ end }}
+
+            {{- if .Results }}
+                {{ $got_results | join ", " }} := {{ test_call . }}({{ $call_args }})
+            {{- else }}
+                {{ test_call . }}({{ $call_args }})
+            {{- end }}
+            {{ .Verification }}
+        })
+    }
+}
+{{ end }}
+`
 
 type Renderer struct {
 	f *internal.Flags
@@ -35,21 +115,20 @@ func (r *Renderer) Render(file *plugins.PluggableFile) error {
 	}
 	defer f.Close()
 
-	return renderTemplate(f, r.f.TmplFile, file)
+	return renderTemplate(f, file)
 }
 
-func renderTemplate(out io.Writer, templatePath string, data any) error {
-	templateName := filepath.Base(templatePath)
-	tmpl, err := template.
-		New(templateName).
+func renderTemplate(out io.Writer, data any) error {
+	t, err := template.
+		New("tmpl").
 		Funcs(funcMap()).
-		ParseFiles(filepath.Clean(templatePath))
+		Parse(tmpl)
 
 	if err != nil {
 		return fmt.Errorf("parse template: %w", err)
 	}
 
-	if err = tmpl.ExecuteTemplate(out, templateName, data); err != nil {
+	if err = t.ExecuteTemplate(out, "tmpl", data); err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
 

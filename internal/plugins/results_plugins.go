@@ -85,7 +85,7 @@ func (c *coreDefaultResultsPlugin) PatchResults(identifiers []*internal.Identifi
 	return identifiers
 }
 
-func toGotSingle(v string) string { // todo: remove me
+func toGotSingle(v string) string { // todo: remove me, merge with a renderer
 	if strings.HasPrefix(v, "want") {
 		return strings.Replace(v, "want", "got", 1)
 	}
