@@ -213,8 +213,9 @@ func parseStructs(fs *token.FileSet, decl *ast.GenDecl) []*Struct {
 		s.Fields = lo.FlatMap(structType.Fields.List, func(field *ast.Field, _ int) []*Identifier {
 			fieldType := getTypeName(fs, field.Type)
 			if len(field.Names) == 0 {
-				// name will be equal to the type, but need to not forget about pointers
-				return []*Identifier{newIdentifier("", fieldType)}
+				var split = strings.Split(fieldType, ".")
+				var fieldName = split[len(split)-1]
+				return []*Identifier{newIdentifier(fieldName, fieldType)}
 			}
 
 			return lo.Map(field.Names, func(name *ast.Ident, _ int) *Identifier {
