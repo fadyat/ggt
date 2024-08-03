@@ -81,3 +81,5 @@ type b string
 
 func (b) String() {}
 ```
+
+### MINOR: count minimal number for function by parsing return statements
