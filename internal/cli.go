@@ -17,7 +17,7 @@ func ParseFlags() (*Flags, error) {
 		OutputFile: "<from-user>_test.go",
 	}
 
-	flag.StringVar(&f.InputFile, "file", "", "input file")
+	flag.StringVar(&f.InputFile, "input", "", "input file")
 	flag.StringVar(&f.OutputFile, "output", "", "output file")
 	flag.Parse()
 
