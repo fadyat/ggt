@@ -122,7 +122,7 @@ func (p *PackageParser) parseAndMatchStructs(missingStructsFn map[string]*Fn) {
 		structType := method.structTypeBasedOnReceiver()
 		if s, ok := fileStructs[structType]; ok {
 			method.Struct = s
-			delete(missingStructsFn, method.Name)
+			delete(missingStructsFn, method.TestName())
 		}
 	}
 }
@@ -132,7 +132,7 @@ func (p *PackageParser) getStructsForMethods(methods []*Fn) error {
 		lo.FilterMap(methods, func(method *Fn, _ int) (*Fn, bool) {
 			return method, method.Receiver != nil
 		}),
-		func(f *Fn) (string, *Fn) { return f.Name, f },
+		func(f *Fn) (string, *Fn) { return f.TestName(), f },
 	)
 
 	if len(missingStructsFn) == 0 {

@@ -40,8 +40,8 @@ type Fn struct {
 func (f *Fn) TestName() string {
 	var sb strings.Builder
 	sb.WriteString("Test_")
-	if f.Struct != nil {
-		sb.WriteString(fmt.Sprintf("%s_", f.Struct.Name))
+	if receiverType := f.structTypeBasedOnReceiver(); receiverType != "" {
+		sb.WriteString(fmt.Sprintf("%s_", receiverType))
 	}
 
 	sb.WriteString(f.Name)

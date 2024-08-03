@@ -15,7 +15,7 @@ import (
 //  - it accepts the list of arguments (which are determined by the plugin itself)
 //  - it generates the prepare function call with required arguments.
 
-// func test_name {
+// func test_name { ( pluggable, only internal/external/by rgx/by name )    		*
 //    struct_fields ( interfaces or structs which doesn't require mocks/stubs
 //   				  	+ pluggable to support concrete types for interfaces )		*
 //    func_args		( args are immutable, defined inside the testcase )
@@ -56,7 +56,7 @@ type ResultPlugin interface {
 	Verify([]*internal.Identifier, map[string][]string)
 }
 
-func WithResultPlugins(fn *internal.Fn, plugins []ResultPlugin) string {
+func withResultPlugins(fn *internal.Fn, plugins []ResultPlugin) string {
 	var (
 		results       = fn.Results
 		verifications = make(map[string][]string)

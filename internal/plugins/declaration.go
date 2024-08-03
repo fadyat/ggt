@@ -26,12 +26,17 @@ func newPluggableFns(fns []*internal.Fn) []*PluggableFn {
 	var (
 		pluggableFns = make([]*PluggableFn, 0, len(fns))
 		rplugs       = newResultPlugins()
+		pplugs       = newPreparationPlugins()
 	)
 
 	for _, fn := range fns {
+		if fn.Struct != nil {
+			fn.Struct.Fields = withPreparationPlugins(fn, pplugs)
+		}
+
 		pluggableFns = append(pluggableFns, &PluggableFn{
 			Fn:           fn,
-			Verification: WithResultPlugins(fn, rplugs),
+			Verification: withResultPlugins(fn, rplugs),
 		})
 	}
 
