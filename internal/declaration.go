@@ -15,8 +15,8 @@ type File struct {
 
 type Struct struct {
 	Name     string
-	Generics []*identifier
-	Fields   []*identifier
+	Generics []*Identifier
+	Fields   []*Identifier
 }
 
 func newStruct(name string) *Struct {
@@ -27,14 +27,25 @@ func newStruct(name string) *Struct {
 
 type Fn struct {
 	Name     string
-	Receiver *identifier
-	Args     []*identifier
-	Generics []*identifier
-	Results  []*identifier
+	Receiver *Identifier
+	Args     []*Identifier
+	Generics []*Identifier
+	Results  []*Identifier
 
 	// Struct is the type definition of the receiver with fields
 	// required for correct method generation.
 	Struct *Struct
+}
+
+func (f *Fn) TestName() string {
+	var sb strings.Builder
+	sb.WriteString("Test_")
+	if f.Struct != nil {
+		sb.WriteString(fmt.Sprintf("%s_", f.Struct.Name))
+	}
+
+	sb.WriteString(f.Name)
+	return sb.String()
 }
 
 func newFn(name string) *Fn {
@@ -43,9 +54,9 @@ func newFn(name string) *Fn {
 	}
 }
 
-func (f *Fn) generateFriendlyNames(iterable []*identifier) {
+func (f *Fn) generateFriendlyNames(iterable []*Identifier) {
 	var (
-		countTypes = lo.CountValuesBy(iterable, func(res *identifier) string {
+		countTypes = lo.CountValuesBy(iterable, func(res *Identifier) string {
 			if res.Type == "error" {
 				return res.Type
 			}
@@ -94,13 +105,13 @@ func (f *Fn) structTypeBasedOnReceiver() string {
 	return strings.TrimPrefix(f.Receiver.Type, "*")
 }
 
-type identifier struct {
+type Identifier struct {
 	Name string
 	Type string
 }
 
-func newIdentifier(name, typ string) *identifier {
-	return &identifier{
+func newIdentifier(name, typ string) *Identifier {
+	return &Identifier{
 		Name: name,
 		Type: typ,
 	}

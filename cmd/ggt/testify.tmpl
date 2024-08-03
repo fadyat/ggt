@@ -13,7 +13,7 @@ import (
 {{- end }}
 
 {{ range .Functions }}
-func {{ test_name . }}(t *testing.T) {
+func {{ .TestName }}(t *testing.T) {
     {{- if .Struct }}
     type fields {{ generics .Generics }} struct {
         {{- range .Struct.Fields }}
@@ -66,12 +66,7 @@ func {{ test_name . }}(t *testing.T) {
                 {{ test_call . }}({{ $call_args }})
             {{- end }}
 
-            {{- if .Results }}
-                {{- $want_results := .Results | collect "Name" | prefix "tt.want." }}
-                {{ range $index, $result := $got_results }}
-                    require.Equal(t, {{ index $want_results $index }}, {{ $result }})
-                {{- end }}
-            {{- end }}
+            {{ .Verification }}
         })
     }
 }

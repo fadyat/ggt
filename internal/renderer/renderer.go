@@ -1,4 +1,4 @@
-package internal
+package renderer
 
 import (
 	"fmt"
@@ -8,19 +8,22 @@ import (
 	"reflect"
 	"strings"
 	"text/template"
+
+	"github.com/fadyat/ggt/internal"
+	"github.com/fadyat/ggt/internal/plugins"
 )
 
 type Renderer struct {
-	f *Flags
+	f *internal.Flags
 }
 
-func NewRenderer(f *Flags) *Renderer {
+func NewRenderer(f *internal.Flags) *Renderer {
 	return &Renderer{
 		f: f,
 	}
 }
 
-func (r *Renderer) Render(file *File) error {
+func (r *Renderer) Render(file *plugins.PluggableFile) error {
 	flag, perms := os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(0666)
 	if _, err := os.Stat(r.f.OutputFile); err == nil {
 		flag, perms = os.O_RDWR|os.O_APPEND, os.FileMode(0644)
@@ -61,7 +64,6 @@ func funcMap() template.FuncMap {
 		"join":          join,
 		"generics":      generics,
 		"generics_args": genericsArgs,
-		"test_name":     testName,
 		"test_call":     testCall,
 		"arg_define":    argDefine,
 		"call_args":     callArgs,
@@ -116,7 +118,7 @@ func toGot(value []string) []string {
 }
 
 // generics is a helper function, which generates the go syntax for the typed arguments.
-func generics(value []*identifier) string {
+func generics(value []*internal.Identifier) string {
 	if len(value) == 0 {
 		return ""
 	}
@@ -129,7 +131,7 @@ func generics(value []*identifier) string {
 	return fmt.Sprintf("[%s]", strings.Join(args, ", "))
 }
 
-func genericsArgs(value []*identifier) string {
+func genericsArgs(value []*internal.Identifier) string {
 	if len(value) == 0 {
 		return ""
 	}
@@ -144,18 +146,7 @@ func genericsArgs(value []*identifier) string {
 	return fmt.Sprintf("[%s]", strings.Join(args, ", "))
 }
 
-func testName(fn *Fn) string {
-	var sb strings.Builder
-	sb.WriteString("Test_")
-	if fn.Struct != nil {
-		sb.WriteString(fmt.Sprintf("%s_", fn.Struct.Name))
-	}
-
-	sb.WriteString(fn.Name)
-	return sb.String()
-}
-
-func testCall(fn *Fn) string {
+func testCall(fn *plugins.PluggableFn) string {
 	var sb strings.Builder
 	if fn.Receiver != nil {
 		sb.WriteString(fmt.Sprintf("%s.", fn.Receiver.Name))
@@ -174,7 +165,7 @@ func argDefine(t string) string {
 	return t
 }
 
-func argCallable(arg *identifier) string {
+func argCallable(arg *internal.Identifier) string {
 	var name = fmt.Sprintf("tt.args.%s", arg.Name)
 	if strings.HasPrefix(arg.Type, "...") {
 		name += "..."
@@ -183,7 +174,7 @@ func argCallable(arg *identifier) string {
 	return name
 }
 
-func callArgs(args []*identifier) string {
+func callArgs(args []*internal.Identifier) string {
 	var call = make([]string, 0, len(args))
 	for _, arg := range args {
 		call = append(call, argCallable(arg))
