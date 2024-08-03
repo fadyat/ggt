@@ -1,3 +1,5 @@
+### MAJOR: import aliases
+
 ### MAJOR: mocks support, generate automatic prepare function + expectations
 
 > - independent of the test framework
