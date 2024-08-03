@@ -36,7 +36,7 @@ func main() {
 	r := renderer.NewRenderer(f)
 	pf := plugins.NewPluggableFile(file)
 
-	showTree(pf) // todo: remove me
+	// showTree(pf) // todo: remove me
 
 	err = r.Render(pf)
 	exit(err, "render tests")

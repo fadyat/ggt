@@ -4,6 +4,8 @@
 
 ### MAJOR: user documentation
 
+### MAJOR: need to overwrite variables to another names, if they are conflicting with a testing one (t, tt, etc.)
+
 ### MAJOR: adding imports, if test file already exists, but new imports are needed
 
 > - need to parse the already existing tests file
@@ -53,6 +55,8 @@ func letsReturnError(msg string) error {
 ```
 
 ### MAJOR: exported functions only
+
+### MAJOR: adding new missing dependencies to a test function (like, new field was added to the struct)
 
 ### MINOR: header in the generated file, that it's generated using the tool
 

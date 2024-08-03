@@ -60,6 +60,8 @@ type mockeryPreparationPlugin struct {
 	packageInterfacesSet map[string]struct{}
 }
 
+// todo: fields need to be created inside the t.Run call, because they need to use other "t" variables
+
 func (m *mockeryPreparationPlugin) PatchFields(fields []*internal.Identifier) []*internal.Identifier {
 	for _, field := range fields {
 		if _, ok := m.packageInterfacesSet[field.Type]; ok {
@@ -75,7 +77,7 @@ func newPreparationPlugins() []PreparationPlugin {
 		&corePreparationPlugin{},
 		&mockeryPreparationPlugin{
 			packageInterfacesSet: map[string]struct{}{
-				"PreparationPlugin": {},
+				"SeparatePackageTools": {},
 			},
 		},
 	}
