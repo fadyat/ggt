@@ -1,7 +1,7 @@
 package mockery
 
 import (
-	"github.com/fadyat/ggt/.play/mockery/mocks"
+	"github.com/fadyat/ggt/play/mockery/mocks"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
