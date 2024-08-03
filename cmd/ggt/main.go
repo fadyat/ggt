@@ -7,6 +7,8 @@ import (
 	"os/exec"
 
 	"github.com/fadyat/ggt/internal"
+	"github.com/fadyat/ggt/internal/plugins"
+	"github.com/fadyat/ggt/internal/renderer"
 )
 
 func exit(err error, msg string) {
@@ -31,8 +33,8 @@ func main() {
 		exit(err, "generate tests")
 	}
 
-	renderer := internal.NewRenderer(f)
-	err = renderer.Render(file)
+	r := renderer.NewRenderer(f)
+	err = r.Render(plugins.NewPluggableFile(file))
 	exit(err, "render tests")
 
 	out, err := exec.Command("gofmt", "-w", f.OutputFile).CombinedOutput()

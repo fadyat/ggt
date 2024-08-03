@@ -1,26 +1,109 @@
-package internal
+package renderer
 
 import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
+
+	"github.com/fadyat/ggt/internal"
+	"github.com/fadyat/ggt/internal/plugins"
 )
 
+const tmpl = `
+{{- if .PackageName }}
+package {{ .PackageName }}
+{{- end }}
+
+{{- if .Imports }}
+import (
+    "testing"
+    "github.com/stretchr/testify/require"
+    {{- range .Imports }}
+    {{ . }}
+    {{- end }}
+)
+{{- end }}
+
+{{ range .Functions }}
+func {{ .TestName }}(t *testing.T) {
+    {{- if .Struct }}
+    type fields {{ generics .Generics }} struct {
+        {{- range .Struct.Fields }}
+        {{ .Name }} {{ arg_define .Type }}
+        {{- end }}
+    }
+    {{- end }}
+
+    {{- if .Args }}
+    type args {{ generics .Generics }} struct {
+        {{- range .Args }}
+        {{ .Name }} {{ arg_define .Type }}
+        {{- end }}
+    }
+    {{- end }}
+
+    {{- if .Results }}
+    type want {{ generics .Generics }} struct {
+        {{- range .Results }}
+        {{ .Name }} {{ arg_define .Type }}
+        {{- end }}
+    }
+    {{- end }}
+
+    testcases := []struct {
+        name string
+        {{- if .Struct }}
+    	fields fields {{ generics_args .Generics }}
+    	{{- end }}
+    	{{- if .Args }}
+    	args args {{ generics_args .Generics }}
+    	{{- end }}
+    	{{- if .Results }}
+    	want want {{ generics_args .Generics }}
+    	{{- end }}
+    }{
+        {},
+    }
+
+    for _, tt := range testcases {
+        t.Run(tt.name, func(t *testing.T) {
+            {{- $got_results := .Results | collect "Name" | to_got }}
+            {{- $call_args := call_args .Args }}
+
+            {{- if .Struct }}
+            {{ .Receiver.Name }} := {{ .Struct.Name }}{
+                {{- range .Struct.Fields }}
+                {{ .Name }}: tt.fields.{{ .Name }},
+                {{- end }}
+            }
+            {{ end }}
+
+            {{- if .Results }}
+                {{ $got_results | join ", " }} := {{ test_call . }}({{ $call_args }})
+            {{- else }}
+                {{ test_call . }}({{ $call_args }})
+            {{- end }}
+            {{ .Verification }}
+        })
+    }
+}
+{{ end }}
+`
+
 type Renderer struct {
-	f *Flags
+	f *internal.Flags
 }
 
-func NewRenderer(f *Flags) *Renderer {
+func NewRenderer(f *internal.Flags) *Renderer {
 	return &Renderer{
 		f: f,
 	}
 }
 
-func (r *Renderer) Render(file *File) error {
+func (r *Renderer) Render(file *plugins.PluggableFile) error {
 	flag, perms := os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(0666)
 	if _, err := os.Stat(r.f.OutputFile); err == nil {
 		flag, perms = os.O_RDWR|os.O_APPEND, os.FileMode(0644)
@@ -32,21 +115,20 @@ func (r *Renderer) Render(file *File) error {
 	}
 	defer f.Close()
 
-	return renderTemplate(f, r.f.TmplFile, file)
+	return renderTemplate(f, file)
 }
 
-func renderTemplate(out io.Writer, templatePath string, data any) error {
-	templateName := filepath.Base(templatePath)
-	tmpl, err := template.
-		New(templateName).
+func renderTemplate(out io.Writer, data any) error {
+	t, err := template.
+		New("tmpl").
 		Funcs(funcMap()).
-		ParseFiles(filepath.Clean(templatePath))
+		Parse(tmpl)
 
 	if err != nil {
 		return fmt.Errorf("parse template: %w", err)
 	}
 
-	if err = tmpl.ExecuteTemplate(out, templateName, data); err != nil {
+	if err = t.ExecuteTemplate(out, "tmpl", data); err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
 
@@ -61,7 +143,6 @@ func funcMap() template.FuncMap {
 		"join":          join,
 		"generics":      generics,
 		"generics_args": genericsArgs,
-		"test_name":     testName,
 		"test_call":     testCall,
 		"arg_define":    argDefine,
 		"call_args":     callArgs,
@@ -116,7 +197,7 @@ func toGot(value []string) []string {
 }
 
 // generics is a helper function, which generates the go syntax for the typed arguments.
-func generics(value []*identifier) string {
+func generics(value []*internal.Identifier) string {
 	if len(value) == 0 {
 		return ""
 	}
@@ -129,7 +210,7 @@ func generics(value []*identifier) string {
 	return fmt.Sprintf("[%s]", strings.Join(args, ", "))
 }
 
-func genericsArgs(value []*identifier) string {
+func genericsArgs(value []*internal.Identifier) string {
 	if len(value) == 0 {
 		return ""
 	}
@@ -144,18 +225,7 @@ func genericsArgs(value []*identifier) string {
 	return fmt.Sprintf("[%s]", strings.Join(args, ", "))
 }
 
-func testName(fn *Fn) string {
-	var sb strings.Builder
-	sb.WriteString("Test_")
-	if fn.Struct != nil {
-		sb.WriteString(fmt.Sprintf("%s_", fn.Struct.Name))
-	}
-
-	sb.WriteString(fn.Name)
-	return sb.String()
-}
-
-func testCall(fn *Fn) string {
+func testCall(fn *plugins.PluggableFn) string {
 	var sb strings.Builder
 	if fn.Receiver != nil {
 		sb.WriteString(fmt.Sprintf("%s.", fn.Receiver.Name))
@@ -174,7 +244,7 @@ func argDefine(t string) string {
 	return t
 }
 
-func argCallable(arg *identifier) string {
+func argCallable(arg *internal.Identifier) string {
 	var name = fmt.Sprintf("tt.args.%s", arg.Name)
 	if strings.HasPrefix(arg.Type, "...") {
 		name += "..."
@@ -183,7 +253,7 @@ func argCallable(arg *identifier) string {
 	return name
 }
 
-func callArgs(args []*identifier) string {
+func callArgs(args []*internal.Identifier) string {
 	var call = make([]string, 0, len(args))
 	for _, arg := range args {
 		call = append(call, argCallable(arg))

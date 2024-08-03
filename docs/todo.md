@@ -1,9 +1,3 @@
-### MAJOR: error assertion `wantErr assert.ErrorFunc / require.ErrorFunc`
-
-> - via flags?
-> - how to make it more flexible? like plugging for custom logics
-> - need to be in args, called in the test function after the function call (how to plug it in the test function?)
-
 ### MAJOR: mocks support, generate automatic prepare function + expectations
 
 > - independent of the test framework
@@ -57,6 +51,8 @@ func letsReturnError(msg string) error {
 	return errors.New(msg)
 }
 ```
+
+### MAJOR: exported functions only
 
 ### MINOR: header in the generated file, that it's generated using the tool
 

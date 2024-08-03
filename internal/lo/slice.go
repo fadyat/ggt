@@ -62,8 +62,9 @@ func ContainsBy[T any](collection []T, predicate func(item T) bool) bool {
 	return false
 }
 
-// todo: comments for code
-
+// SliceToMap returns a map containing key-value pairs provided by transform function applied to elements of the given slice.
+// If any of two pairs would have the same key the last one gets added to the map.
+// The order of keys in returned map is not specified and is not guaranteed to be the same from the original array.
 func SliceToMap[T any, K comparable, V any](collection []T, transform func(item T) (K, V)) map[K]V {
 	out := make(map[K]V)
 

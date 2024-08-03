@@ -9,19 +9,16 @@ import (
 type Flags struct {
 	InputFile  string
 	OutputFile string
-	TmplFile   string
 }
 
 func ParseFlags() (*Flags, error) {
 	var f = &Flags{
 		InputFile:  "<from-user>.go",
 		OutputFile: "<from-user>_test.go",
-		TmplFile:   "testify.tmpl",
 	}
 
 	flag.StringVar(&f.InputFile, "file", "", "input file")
 	flag.StringVar(&f.OutputFile, "output", "", "output file")
-	flag.StringVar(&f.TmplFile, "tmpl", f.TmplFile, "template file")
 	flag.Parse()
 
 	if !strings.HasSuffix(f.InputFile, ".go") {
