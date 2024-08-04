@@ -4,7 +4,7 @@ import "github.com/fadyat/ggt/internal"
 
 type PluggableFile struct {
 	PackageName string
-	Imports     []string
+	Imports     []*internal.Import
 	Functions   []*PluggableFn
 }
 
@@ -25,13 +25,18 @@ func NewPluggableFile(f *internal.File) *PluggableFile {
 func newPluggableFns(fns []*internal.Fn) []*PluggableFn {
 	var (
 		pluggableFns = make([]*PluggableFn, 0, len(fns))
-		rplugs       = newResultsPlugins()
+		rplugs       = newResultPlugins()
+		pplugs       = newPreparationPlugins()
 	)
 
 	for _, fn := range fns {
+		if fn.Struct != nil {
+			fn.Struct.Fields = withPreparationPlugins(fn, pplugs)
+		}
+
 		pluggableFns = append(pluggableFns, &PluggableFn{
 			Fn:           fn,
-			Verification: WithResultsPlugins(fn, rplugs),
+			Verification: withResultPlugins(fn, rplugs),
 		})
 	}
 

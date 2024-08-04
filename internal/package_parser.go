@@ -70,16 +70,25 @@ func (p *PackageParser) GenerateMissingTests() (f *File, err error) {
 
 	if p.outputAst == nil {
 		file.PackageName = p.inputAst.Name.Name
-		file.Imports = lo.Map(p.inputAst.Imports, func(imp *ast.ImportSpec, _ int) string {
-			return imp.Path.Value
-		})
-
-		// appending empty string in cases when no imports exist, but
-		// need to generate imports from the template
-		file.Imports = append(file.Imports, "")
+		file.Imports = p.getImports(p.inputAst)
 	}
 
 	return file, nil
+}
+
+func (p *PackageParser) getImports(f *ast.File) []*Import {
+	fromFile := lo.Map(f.Imports, func(imp *ast.ImportSpec, _ int) *Import {
+		var alias string
+		if imp.Name != nil {
+			alias = imp.Name.Name
+		}
+
+		return newImport(alias, imp.Path.Value)
+	})
+
+	// appending empty import in cases when no imports exist, but
+	// need to generate imports from the template
+	return append(fromFile, newImport("", ""))
 }
 
 func (p *PackageParser) parseFile(path string) (*token.FileSet, *ast.File, error) {
@@ -122,7 +131,7 @@ func (p *PackageParser) parseAndMatchStructs(missingStructsFn map[string]*Fn) {
 		structType := method.structTypeBasedOnReceiver()
 		if s, ok := fileStructs[structType]; ok {
 			method.Struct = s
-			delete(missingStructsFn, method.Name)
+			delete(missingStructsFn, method.TestName())
 		}
 	}
 }
@@ -132,7 +141,7 @@ func (p *PackageParser) getStructsForMethods(methods []*Fn) error {
 		lo.FilterMap(methods, func(method *Fn, _ int) (*Fn, bool) {
 			return method, method.Receiver != nil
 		}),
-		func(f *Fn) (string, *Fn) { return f.Name, f },
+		func(f *Fn) (string, *Fn) { return f.TestName(), f },
 	)
 
 	if len(missingStructsFn) == 0 {
@@ -213,8 +222,9 @@ func parseStructs(fs *token.FileSet, decl *ast.GenDecl) []*Struct {
 		s.Fields = lo.FlatMap(structType.Fields.List, func(field *ast.Field, _ int) []*Identifier {
 			fieldType := getTypeName(fs, field.Type)
 			if len(field.Names) == 0 {
-				// name will be equal to the type, but need to not forget about pointers
-				return []*Identifier{newIdentifier("", fieldType)}
+				var split = strings.Split(fieldType, ".")
+				var fieldName = split[len(split)-1]
+				return []*Identifier{newIdentifier(fieldName, fieldType)}
 			}
 
 			return lo.Map(field.Names, func(name *ast.Ident, _ int) *Identifier {

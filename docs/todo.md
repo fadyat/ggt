@@ -1,8 +1,11 @@
 ### MAJOR: mocks support, generate automatic prepare function + expectations
 
 > - independent of the test framework
+> - adding missing imports
 
 ### MAJOR: user documentation
+
+### MAJOR: need to overwrite variables to another names, if they are conflicting with a testing one (t, tt, etc.)
 
 ### MAJOR: adding imports, if test file already exists, but new imports are needed
 
@@ -54,6 +57,8 @@ func letsReturnError(msg string) error {
 
 ### MAJOR: exported functions only
 
+### MAJOR: adding new missing dependencies to a test function (like, new field was added to the struct)
+
 ### MINOR: header in the generated file, that it's generated using the tool
 
 > - write some text, which tells that the file is generated using the tool
@@ -77,3 +82,5 @@ type b string
 
 func (b) String() {}
 ```
+
+### MINOR: count minimal number for function by parsing return statements
