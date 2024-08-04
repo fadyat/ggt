@@ -70,16 +70,25 @@ func (p *PackageParser) GenerateMissingTests() (f *File, err error) {
 
 	if p.outputAst == nil {
 		file.PackageName = p.inputAst.Name.Name
-		file.Imports = lo.Map(p.inputAst.Imports, func(imp *ast.ImportSpec, _ int) string {
-			return imp.Path.Value
-		})
-
-		// appending empty string in cases when no imports exist, but
-		// need to generate imports from the template
-		file.Imports = append(file.Imports, "")
+		file.Imports = p.getImports(p.inputAst)
 	}
 
 	return file, nil
+}
+
+func (p *PackageParser) getImports(f *ast.File) []*Import {
+	fromFile := lo.Map(f.Imports, func(imp *ast.ImportSpec, _ int) *Import {
+		var alias string
+		if imp.Name != nil {
+			alias = imp.Name.Name
+		}
+
+		return newImport(alias, imp.Path.Value)
+	})
+
+	// appending empty import in cases when no imports exist, but
+	// need to generate imports from the template
+	return append(fromFile, newImport("", ""))
 }
 
 func (p *PackageParser) parseFile(path string) (*token.FileSet, *ast.File, error) {

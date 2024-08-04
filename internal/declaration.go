@@ -9,7 +9,7 @@ import (
 
 type File struct {
 	PackageName string
-	Imports     []string
+	Imports     []*Import
 	Functions   []*Fn
 }
 
@@ -23,6 +23,26 @@ func newStruct(name string) *Struct {
 	return &Struct{
 		Name: name,
 	}
+}
+
+type Import struct {
+	Alias string
+	Path  string
+}
+
+func newImport(alias, path string) *Import {
+	return &Import{
+		Alias: alias,
+		Path:  strings.Trim(path, `"`),
+	}
+}
+
+func (i *Import) String() string {
+	if i.Alias == "" {
+		return fmt.Sprintf(`"%s"`, i.Path)
+	}
+
+	return fmt.Sprintf(`%s "%s"`, i.Alias, i.Path)
 }
 
 type Fn struct {

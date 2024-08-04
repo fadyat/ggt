@@ -22,7 +22,9 @@ import (
     "testing"
     "github.com/stretchr/testify/require"
     {{- range .Imports }}
-    {{ . }}
+    {{- if .Path }}
+	{{ .String }}
+	{{- end }}
     {{- end }}
 )
 {{- end }}

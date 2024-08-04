@@ -1,15 +1,21 @@
 package mockery
 
 import (
-	"github.com/fadyat/ggt/play/mockery/mocks"
-	"github.com/stretchr/testify/require"
+	astalias "go/ast"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/fadyat/ggt/play/mockery/mocks"
 )
 
 func Test_someToolsManager_UseInPackageTools(t *testing.T) {
 	type fields struct {
 		inPackageTools       InPackageTools
 		separatePackageTools *mocks.SeparatePackageTools
+	}
+	type args struct {
+		want astalias.File
 	}
 	type want struct {
 		want string
@@ -18,6 +24,7 @@ func Test_someToolsManager_UseInPackageTools(t *testing.T) {
 	testcases := []struct {
 		name   string
 		fields fields
+		args   args
 		want   want
 	}{
 		{},
@@ -30,7 +37,7 @@ func Test_someToolsManager_UseInPackageTools(t *testing.T) {
 				separatePackageTools: tt.fields.separatePackageTools,
 			}
 
-			got := m.UseInPackageTools()
+			got := m.UseInPackageTools(tt.args.want)
 			require.Equal(t, tt.want.want, got)
 		})
 	}

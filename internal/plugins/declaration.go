@@ -4,7 +4,7 @@ import "github.com/fadyat/ggt/internal"
 
 type PluggableFile struct {
 	PackageName string
-	Imports     []string
+	Imports     []*internal.Import
 	Functions   []*PluggableFn
 }
 

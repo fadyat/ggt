@@ -1,20 +1,7 @@
-### MAJOR: import aliases
-
-```go
-// printing imports with the aliases
-for _, imp := range p.inputAst.Imports {
-	var alias = ""
-	if imp.Name != nil {
-		alias = imp.Name.Name
-	}
-
-	fmt.Println(alias, imp.Path.Value)
-}
-```
-
 ### MAJOR: mocks support, generate automatic prepare function + expectations
 
 > - independent of the test framework
+> - adding missing imports
 
 ### MAJOR: user documentation
 

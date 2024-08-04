@@ -4,6 +4,7 @@ package mockery
 
 import (
 	"fmt"
+	astalias "go/ast"
 )
 
 //go:generate mockery --name=InPackageTools --inpackage --case=underscore --with-expecter
@@ -17,7 +18,7 @@ type someToolsManager struct {
 	separatePackageTools SeparatePackageTools
 }
 
-func (m *someToolsManager) UseInPackageTools() string {
+func (m *someToolsManager) UseInPackageTools(_ astalias.File) string {
 	return m.inPackageTools.String()
 }
 

@@ -9,6 +9,10 @@ type PreparationPlugin interface {
 
 	// --------------------------------------------------------
 	//
+	// pluggable imports for new types													*
+
+	// --------------------------------------------------------
+	//
 	// pluggable preparation function													*
 	//
 	// 	  testcases := []struct {

@@ -5,3 +5,6 @@ tools:
 
 generate:
 	@go generate ./...
+
+fmt:
+	@.bin/golangci-lint run --fix -v ./...
