@@ -15,6 +15,10 @@ import (
 	"github.com/fadyat/ggt/internal/lo"
 )
 
+var (
+	ErrNoMissingTests = errors.New("no missing tests")
+)
+
 // PackageParser is required in cases, when we need to generate the
 // testcase for some method from one file, but the struct definition
 // is stored in another file. In this case, we need to perform the lazy
