@@ -1,35 +1,60 @@
 package internal
 
 import (
-	"flag"
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/jessevdk/go-flags"
 )
 
+var ErrParseFlags = errors.New("error parsing flags")
+
 type Flags struct {
-	InputFile  string
-	OutputFile string
+	InputFile  string `short:"i" long:"input" description:"input file"`
+	OutputFile string `short:"o" long:"output" description:"output file"`
+	Debug      bool   `short:"d" long:"debug" description:"debug mode"`
 }
 
-func ParseFlags() (*Flags, error) {
-	var f = &Flags{
-		InputFile:  "<from-user>.go",
-		OutputFile: "<from-user>_test.go",
-	}
-
-	flag.StringVar(&f.InputFile, "input", "", "input file")
-	flag.StringVar(&f.OutputFile, "output", "", "output file")
-	flag.Parse()
-
-	if !strings.HasSuffix(f.InputFile, ".go") {
-		return nil, fmt.Errorf("input file must have .go extension")
+// mergeWithRemainingArgs writes the argument value, if not already set, from the
+// flag to the corresponding field in the Flags struct.
+func (f *Flags) mergeWithRemainingArgs(args []string) {
+	if len(args) > 0 && f.InputFile == "" {
+		f.InputFile = args[0]
 	}
 
 	if f.OutputFile == "" {
-		f.OutputFile = fmt.Sprintf("%s_test.go", strings.TrimSuffix(f.InputFile, ".go"))
-	} else if !strings.HasSuffix(f.OutputFile, "_test.go") {
-		return nil, fmt.Errorf("output file must have _test.go extension")
+		if len(args) > 1 {
+			f.OutputFile = args[1]
+		} else {
+			f.OutputFile = fmt.Sprintf("%s_test.go", strings.TrimSuffix(f.InputFile, ".go"))
+		}
+	}
+}
+
+func (f *Flags) validate() error {
+	if !strings.HasSuffix(f.InputFile, ".go") {
+		return fmt.Errorf("input file %q expected format: *.go", f.InputFile)
 	}
 
-	return f, nil
+	if !strings.HasSuffix(f.OutputFile, "_test.go") {
+		return fmt.Errorf("output file %q expected format: *_test.go", f.OutputFile)
+	}
+
+	return nil
+}
+
+func ParseFlags(args []string) (*Flags, error) {
+	var opts Flags
+	args, err := flags.ParseArgs(&opts, args)
+	if err != nil {
+		return nil, ErrParseFlags
+	}
+
+	opts.mergeWithRemainingArgs(args)
+	if err = opts.validate(); err != nil {
+		return nil, err
+	}
+
+	return &opts, nil
 }

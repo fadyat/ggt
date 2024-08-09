@@ -1,4 +1,4 @@
-//go:generate ggt -input mockery.go
+//go:generate ggt mockery.go
 
 package mockery
 

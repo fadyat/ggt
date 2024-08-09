@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/fadyat/ggt/internal"
+	"github.com/fadyat/ggt/internal/observability"
 	"github.com/fadyat/ggt/internal/plugins"
 	"github.com/fadyat/ggt/internal/renderer"
 )
@@ -19,8 +20,14 @@ func exit(err error, msg string) {
 }
 
 func main() {
-	f, err := internal.ParseFlags()
-	exit(err, "parse flags")
+	f, err := internal.ParseFlags(os.Args[1:])
+	if err != nil {
+		if errors.Is(err, internal.ErrParseFlags) {
+			return
+		}
+
+		exit(err, "parse flags")
+	}
 
 	parser := internal.NewParser(f)
 	file, err := parser.GenerateMissingTests()
@@ -33,41 +40,17 @@ func main() {
 		exit(err, "generate tests")
 	}
 
-	r := renderer.NewRenderer(f)
 	pf := plugins.NewPluggableFile(file)
 
-	// showTree(pf) // todo: remove me
+	if f.Debug {
+		observability.ShowTree(pf)
+	}
 
-	err = r.Render(pf)
+	err = renderer.NewRenderer(f).Render(pf)
 	exit(err, "render tests")
 
 	out, err := exec.Command("gofmt", "-w", f.OutputFile).CombinedOutput()
 	if err != nil {
 		exit(fmt.Errorf("%s: %s", err, out), "format generated file")
-	}
-}
-
-func showTree(f *plugins.PluggableFile) {
-	fmt.Println(f.PackageName)
-	for _, fn := range f.Functions {
-		fmt.Printf("\t%s\n", fn.TestName())
-
-		if fn.Struct != nil {
-			fmt.Printf("\t\t%s\n", fn.Struct.Name)
-			for _, field := range fn.Struct.Fields {
-				fmt.Printf("\t\t\t%s %s\n", field.Name, field.Type)
-			}
-		}
-
-		fmt.Printf("\t\t%s\n", fn.Name)
-		for _, arg := range fn.Args {
-			fmt.Printf("\t\t\t%s %s\n", arg.Name, arg.Type)
-		}
-
-		for _, res := range fn.Results {
-			fmt.Printf("\t\t\t%s %s\n", res.Name, res.Type)
-		}
-
-		fmt.Println()
 	}
 }
