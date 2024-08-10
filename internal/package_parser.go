@@ -48,7 +48,7 @@ func NewParser(flags *Flags) *PackageParser {
 	}
 }
 
-func (p *PackageParser) GenerateMissingTests() (f *File, err error) {
+func (p *PackageParser) GenerateMissingTests(inputFnFilters ...func(*Fn) bool) (f *File, err error) {
 	p.inputFileSet, p.inputAst, err = p.parseFile(p.flags.InputFile)
 	if err != nil {
 		return nil, fmt.Errorf("parse input file: %w", err)
@@ -59,7 +59,7 @@ func (p *PackageParser) GenerateMissingTests() (f *File, err error) {
 		return nil, fmt.Errorf("parse output file: %w", err)
 	}
 
-	missingTests := p.getMissingTests()
+	missingTests := p.getMissingTests(p.createInputFnFilter(inputFnFilters))
 	if len(missingTests) == 0 {
 		return nil, ErrNoMissingTests
 	}
@@ -78,6 +78,22 @@ func (p *PackageParser) GenerateMissingTests() (f *File, err error) {
 	}
 
 	return file, nil
+}
+
+func (p *PackageParser) createInputFnFilter(inputFnFilters []func(*Fn) bool) func(*Fn) bool {
+	if len(inputFnFilters) == 0 {
+		return func(*Fn) bool { return true }
+	}
+
+	return func(fn *Fn) bool {
+		for _, filter := range inputFnFilters {
+			if !filter(fn) {
+				return false
+			}
+		}
+
+		return true
+	}
 }
 
 func (p *PackageParser) getImports(f *ast.File) []*Import {
@@ -105,17 +121,17 @@ func (p *PackageParser) parseFile(path string) (*token.FileSet, *ast.File, error
 	return tokenFileSet, astFile, nil
 }
 
-func (p *PackageParser) getMissingTests() []*Fn {
-	inputFuncs := getFuncs(p.inputFileSet, p.inputAst, func(fs *token.FileSet, decl *ast.FuncDecl) *Fn {
+func (p *PackageParser) getMissingTests(inputFilter func(*Fn) bool) []*Fn {
+	inputFuncs := getFuncs(p.inputFileSet, p.inputAst, func(fs *token.FileSet, decl *ast.FuncDecl) (*Fn, bool) {
 		ff := parseFn(fs, decl)
 		ff.generateFriendlyNames(ff.Args)
 		ff.generateFriendlyNames(ff.Results)
-		return ff
+		return ff, inputFilter(ff)
 	})
 
-	outputFuncs := getFuncs(p.outputFileSet, p.outputAst, func(fs *token.FileSet, decl *ast.FuncDecl) *Fn {
+	outputFuncs := getFuncs(p.outputFileSet, p.outputAst, func(fs *token.FileSet, decl *ast.FuncDecl) (*Fn, bool) {
 		ff := parseFn(fs, decl)
-		return ff
+		return ff, true
 	})
 
 	return lo.FilterMap(inputFuncs, func(item *Fn, _ int) (*Fn, bool) {
@@ -277,7 +293,11 @@ func defaultExcludeFunc(inputFile string) func(string) bool {
 	}
 }
 
-func getFuncs(fs *token.FileSet, f *ast.File, parser func(*token.FileSet, *ast.FuncDecl) *Fn) []*Fn {
+func getFuncs(
+	fs *token.FileSet,
+	f *ast.File,
+	parser func(*token.FileSet, *ast.FuncDecl) (*Fn, bool),
+) []*Fn {
 	if f == nil {
 		return nil
 	}
@@ -288,7 +308,7 @@ func getFuncs(fs *token.FileSet, f *ast.File, parser func(*token.FileSet, *ast.F
 			return nil, false
 		}
 
-		return parser(fs, fn), true
+		return parser(fs, fn)
 	})
 }
 

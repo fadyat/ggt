@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"unicode"
 
 	"github.com/fadyat/ggt/internal"
 	"github.com/fadyat/ggt/internal/observability"
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	parser := internal.NewParser(f)
-	file, err := parser.GenerateMissingTests()
+	file, err := parser.GenerateMissingTests(isExportedFunc)
 	if err != nil {
 		if errors.Is(err, internal.ErrNoMissingTests) {
 			fmt.Println("no missing tests")
@@ -53,4 +54,8 @@ func main() {
 	if err != nil {
 		exit(fmt.Errorf("%s: %s", err, out), "format generated file")
 	}
+}
+
+func isExportedFunc(fn *internal.Fn) bool {
+	return unicode.IsUpper(rune(fn.Name[0]))
 }
