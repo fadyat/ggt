@@ -8,8 +8,10 @@ import (
 	"go/printer"
 	"go/token"
 	"go/types"
+	"io"
 	"log"
 	"log/slog"
+	"os"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -21,9 +23,10 @@ const (
 	mode = packages.NeedName |
 		packages.NeedTypes |
 		packages.NeedSyntax |
-		packages.NeedTypesInfo
+		packages.NeedTypesInfo |
+		packages.NeedImports
 
-	pattern = "./.play"
+	pattern = "./..."
 )
 
 var (
@@ -31,19 +34,54 @@ var (
 	fset = token.NewFileSet()
 )
 
+// todo: add checks, that file exists, now disabling this feature
+func withPatterns() []string {
+	if strings.HasSuffix(pattern, "_test.go") {
+		return []string{strings.TrimSuffix(pattern, "_test.go") + ".go", pattern}
+	}
+
+	if strings.HasSuffix(pattern, ".go") {
+		return []string{pattern, strings.TrimSuffix(pattern, ".go") + "_test.go"}
+	}
+
+	return []string{pattern}
+}
+
 func main() {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	flag.Parse()
 
-	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: flag.Arg(0), Tests: false}
+	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: flag.Arg(0), Tests: true}
 
 	pkgs, err := packages.Load(cfg, pattern)
+	packages.PrintErrors(pkgs)
 	if err != nil {
 		log.Fatalf("loading packages: %v", err)
 	}
 
 	for _, pkg := range pkgs {
-		processPackage(pkg)
+		pkgInfo := processPackage(pkg)
+		_ = pkgInfo
+
+		fmt.Println()
+		fmt.Println(pkg.ID)
+		// todo: if file path is fully provided, need also include the test file automatically
+		// 	command-line-arguments if file path is fully provided
+		fmt.Println()
+
+		// idea: store pair of packages:
+		// 1. normal package
+		// 2. test package
+		//
+		// need to store pair, because second one can be with _test suffix,
+		// and we need some tests information from it.
+		// if without suffix, we still need to know current state of tests.
+
+		renderPackage(pkgInfo, func(_ string) (io.WriteCloser, error) {
+			return os.Stdout, nil
+		})
+
+		fmt.Println("-----")
 	}
 }
 
@@ -69,19 +107,19 @@ type funcInfo struct {
 }
 
 func processPackage(pkg *packages.Package) *packageInfo {
-	lg.Debug("processing package", slog.String("name", pkg.Name))
+	lg.Debug("package", slog.String("path", pkg.PkgPath))
 
 	pi := packageInfo{pkg: pkg, files: make(map[string]*fileInfo)}
 	for _, fileAst := range pkg.Syntax {
 		fi := processFile(fileAst, pkg.TypesInfo)
-		pi.files[fileAst.Name.Name] = fi
+		pi.files[fset.Position(fileAst.Package).Filename] = fi
 	}
 
 	return &pi
 }
 
 func processFile(fileAst *ast.File, tinfo *types.Info) *fileInfo {
-	lg.Debug("processing file", slog.String("name", fileAst.Name.Name))
+	lg.Debug("file", slog.String("path", fset.Position(fileAst.Package).Filename))
 
 	fi := fileInfo{file: fileAst, funcs: make(map[string]*funcInfo)}
 	for _, decl := range fileAst.Decls {
@@ -95,8 +133,6 @@ func processFile(fileAst *ast.File, tinfo *types.Info) *fileInfo {
 }
 
 func processFuncDecl(fd *ast.FuncDecl, tinfo *types.Info) *funcInfo {
-	lg.Debug("processing func", slog.String("name", fd.Name.Name))
-
 	return &funcInfo{
 		funcDecl: fd,
 		params: lo.FlatMap(fd.Type.Params.List, func(item *ast.Field, _ int) []*paramInfo {
