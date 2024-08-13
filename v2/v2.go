@@ -88,22 +88,6 @@ func processFile(fileAst *ast.File, tinfo *types.Info) *fileInfo {
 		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
 			fni := processFuncDecl(funcDecl, tinfo)
 			fi.funcs[funcDecl.Name.Name] = fni
-
-			if fni.recv != nil {
-				fmt.Println(
-					"recv:",
-					fni.recv.recvParam.name,
-					fni.recv.recvParam.ftype.Syntax(),
-					"generics",
-					strings.Join(lo.Map(fni.recv.typeParams, func(p *paramInfo, _ int) string {
-						return p.name + " " + p.ftype.semanticType.String()
-					}), ", "),
-					"fields",
-					strings.Join(lo.Map(fni.recv.fields, func(p *paramInfo, _ int) string {
-						return p.name + " " + p.ftype.semanticType.String()
-					}), ", "),
-				)
-			}
 		}
 	}
 
@@ -152,10 +136,34 @@ type typeInfo struct {
 	semanticType types.Type
 }
 
-func (t *typeInfo) Syntax() string {
-	var b bytes.Buffer
-	_ = printer.Fprint(&b, fset, t.syntaxType)
-	return b.String()
+func (t *typeInfo) String() string {
+	if t.syntaxType != nil {
+		var b bytes.Buffer
+		_ = printer.Fprint(&b, fset, t.syntaxType)
+		return b.String()
+	}
+
+	return t.semanticTypeString(t.semanticType)
+}
+
+func (t *typeInfo) semanticTypeString(stype types.Type) string {
+	switch st := stype.(type) {
+	case *types.Pointer:
+		return "*" + t.semanticTypeString(st.Elem())
+	case *types.Named:
+		packagePath := strings.Split(st.String(), "/")
+		packageWithStruct := strings.Split(packagePath[len(packagePath)-1], ".")
+		structName := packageWithStruct[len(packageWithStruct)-1]
+
+		pkg := st.Obj().Pkg()
+		if pkg == nil {
+			return structName
+		}
+
+		return fmt.Sprintf("%s.%s", pkg.Name(), structName)
+	}
+
+	return stype.String()
 }
 
 func fieldParams(field *ast.Field, tinfo *types.Info) []*paramInfo {
@@ -195,10 +203,10 @@ func processRecv(recv *ast.Field, tinfo *types.Info) *recvInfo {
 				for i := 0; i < namedType.TypeParams().Len(); i++ {
 					typeParams = append(typeParams, &paramInfo{
 						field: recv,
-						name:  namedType.TypeParams().At(i).Obj().Name(), // todo: want from syntax ??
+						name:  namedType.TypeParams().At(i).Obj().Name(),
 						ftype: &typeInfo{
-							syntaxType:   nil, // todo: skipping syntax type for now
-							semanticType: namedType.TypeParams().At(i),
+							syntaxType:   nil, // skipping due to complexity and unimportance
+							semanticType: namedType.TypeParams().At(i).Constraint(),
 						},
 					})
 				}
@@ -217,9 +225,9 @@ func processRecv(recv *ast.Field, tinfo *types.Info) *recvInfo {
 				for i := 0; i < structType.NumFields(); i++ {
 					fields = append(fields, &paramInfo{
 						field: recv,
-						name:  structType.Field(i).Name(), // todo: want from syntax ??
+						name:  structType.Field(i).Name(),
 						ftype: &typeInfo{
-							syntaxType:   nil, // todo: skipping syntax type for now
+							syntaxType:   nil, // skipping due to complexity and unimportance
 							semanticType: structType.Field(i).Type(),
 						},
 					})
