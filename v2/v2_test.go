@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -17,7 +18,7 @@ const (
 		packages.NeedSyntax |
 		packages.NeedTypesInfo
 
-	directory = "./.play/"
+	directory = "./play/"
 	pattern   = "./..."
 )
 
@@ -28,9 +29,7 @@ const (
 func Test_ggt(t *testing.T) {
 	cfg := &packages.Config{Fset: token.NewFileSet(), Mode: mode, Dir: directory}
 	pkgs, err := packages.Load(cfg, pattern)
-	if err != nil {
-		t.Fatalf("loading packages: %v", err)
-	}
+	require.NoError(t, err)
 
 	for _, pkg := range pkgs {
 		for _, fileAst := range pkg.Syntax {

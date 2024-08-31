@@ -34,3 +34,7 @@ linters-settings:
       - default
       - blank
       - localmodule
+
+issues:
+  exclude-dirs:
+    - play

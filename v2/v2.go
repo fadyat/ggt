@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"os"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -34,6 +33,9 @@ var (
 	fset = token.NewFileSet()
 )
 
+//	todo: if file path is fully provided, need also include the test file automatically
+//	 command-line-arguments if file path is fully provided
+//
 // todo: add checks, that file exists, now disabling this feature
 func withPatterns() []string {
 	if strings.HasSuffix(pattern, "_test.go") {
@@ -48,7 +50,7 @@ func withPatterns() []string {
 }
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	slog.SetLogLoggerLevel(slog.LevelError)
 	flag.Parse()
 
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: flag.Arg(0), Tests: true}
@@ -59,29 +61,39 @@ func main() {
 		log.Fatalf("loading packages: %v", err)
 	}
 
+	packagePairs := make(map[string]*packagePair)
 	for _, pkg := range pkgs {
+		// skipping compiled test files, required for the test files
+		if strings.HasSuffix(pkg.PkgPath, ".test") {
+			continue
+		}
+
+		pkgPath := strings.TrimSuffix(pkg.PkgPath, "_test")
+		if _, ok := packagePairs[pkgPath]; !ok {
+			packagePairs[pkgPath] = &packagePair{}
+		}
+
 		pkgInfo := processPackage(pkg)
-		_ = pkgInfo
+		packagePairs[pkgPath].add(pkgInfo)
+	}
 
-		fmt.Println()
-		fmt.Println(pkg.ID)
-		// todo: if file path is fully provided, need also include the test file automatically
-		// 	command-line-arguments if file path is fully provided
-		fmt.Println()
-
-		// idea: store pair of packages:
-		// 1. normal package
-		// 2. test package
-		//
-		// need to store pair, because second one can be with _test suffix,
-		// and we need some tests information from it.
-		// if without suffix, we still need to know current state of tests.
-
-		renderPackage(pkgInfo, func(_ string) (io.WriteCloser, error) {
-			return os.Stdout, nil
+	for _, pkgPair := range packagePairs {
+		renderPackage(pkgPair, func(_ string) (io.WriteCloser, error) {
+			return &stdoutWriter{}, nil
 		})
+	}
+}
 
-		fmt.Println("-----")
+type packagePair struct {
+	normal *packageInfo
+	test   *packageInfo
+}
+
+func (p *packagePair) add(pi *packageInfo) {
+	if strings.HasSuffix(pi.pkg.PkgPath, "_test") {
+		p.test = pi
+	} else {
+		p.normal = pi
 	}
 }
 
@@ -104,6 +116,23 @@ type funcInfo struct {
 	typeParams []*paramInfo
 	results    []*paramInfo
 	recv       *recvInfo
+}
+
+func (f *funcInfo) TestName() string {
+	var sb strings.Builder
+	sb.WriteString("Test_")
+	if f.recv != nil {
+		sb.WriteString(fmt.Sprintf("%s_", f.recv.recvParam.name))
+	}
+
+	sb.WriteString(f.funcDecl.Name.Name)
+	return sb.String()
+}
+
+func (f *funcInfo) RenderUnchanged() string {
+	var b bytes.Buffer
+	_ = printer.Fprint(&b, fset, f.funcDecl)
+	return b.String()
 }
 
 func processPackage(pkg *packages.Package) *packageInfo {
@@ -283,4 +312,20 @@ func getNamedType(tt types.Type) *types.Named {
 	}
 
 	return nil
+}
+
+type importInfo struct {
+	Alias string
+	Path  string
+}
+
+func (i *importInfo) Render() string {
+	var sb strings.Builder
+	if i.Alias != "" {
+		sb.WriteString(i.Alias)
+		sb.WriteString(" ")
+	}
+
+	sb.WriteString(i.Path)
+	return sb.String()
 }
