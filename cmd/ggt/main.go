@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"unicode"
 
 	"github.com/fadyat/ggt/internal"
+	"github.com/fadyat/ggt/internal/observability"
 	"github.com/fadyat/ggt/internal/plugins"
 	"github.com/fadyat/ggt/internal/renderer"
 )
@@ -19,11 +21,17 @@ func exit(err error, msg string) {
 }
 
 func main() {
-	f, err := internal.ParseFlags()
-	exit(err, "parse flags")
+	f, err := internal.ParseFlags(os.Args[1:])
+	if err != nil {
+		if errors.Is(err, internal.ErrParseFlags) {
+			return
+		}
+
+		exit(err, "parse flags")
+	}
 
 	parser := internal.NewParser(f)
-	file, err := parser.GenerateMissingTests()
+	file, err := parser.GenerateMissingTests(isExportedFunc)
 	if err != nil {
 		if errors.Is(err, internal.ErrNoMissingTests) {
 			fmt.Println("no missing tests")
@@ -33,12 +41,21 @@ func main() {
 		exit(err, "generate tests")
 	}
 
-	r := renderer.NewRenderer(f)
-	err = r.Render(plugins.NewPluggableFile(file))
+	pf := plugins.NewPluggableFile(file)
+
+	if f.Debug {
+		observability.ShowTree(pf)
+	}
+
+	err = renderer.NewRenderer(f).Render(pf)
 	exit(err, "render tests")
 
 	out, err := exec.Command("gofmt", "-w", f.OutputFile).CombinedOutput()
 	if err != nil {
 		exit(fmt.Errorf("%s: %s", err, out), "format generated file")
 	}
+}
+
+func isExportedFunc(fn *internal.Fn) bool {
+	return unicode.IsUpper(rune(fn.Name[0]))
 }

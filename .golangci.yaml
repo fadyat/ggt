@@ -12,7 +12,6 @@ linters:
     - staticcheck
     - unused
     - gocritic
-    - ireturn
     - prealloc
     - predeclared
     - reassign
@@ -35,3 +34,7 @@ linters-settings:
       - default
       - blank
       - localmodule
+
+issues:
+  exclude-dirs:
+    - play

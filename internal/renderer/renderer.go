@@ -22,7 +22,9 @@ import (
     "testing"
     "github.com/stretchr/testify/require"
     {{- range .Imports }}
-    {{ . }}
+    {{- if .Path }}
+	{{ .String }}
+	{{- end }}
     {{- end }}
 )
 {{- end }}
@@ -30,11 +32,13 @@ import (
 {{ range .Functions }}
 func {{ .TestName }}(t *testing.T) {
     {{- if .Struct }}
+	{{- if .Struct.Fields }}
     type fields {{ generics .Generics }} struct {
         {{- range .Struct.Fields }}
         {{ .Name }} {{ arg_define .Type }}
         {{- end }}
     }
+	{{- end }}
     {{- end }}
 
     {{- if .Args }}
@@ -56,7 +60,9 @@ func {{ .TestName }}(t *testing.T) {
     testcases := []struct {
         name string
         {{- if .Struct }}
+		{{- if .Struct.Fields }}
     	fields fields {{ generics_args .Generics }}
+		{{- end }}
     	{{- end }}
     	{{- if .Args }}
     	args args {{ generics_args .Generics }}
